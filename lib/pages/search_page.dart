@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:states_rebuilder/states_rebuilder.dart';
 
 import '../data/models/series.dart';
+import '../data/series_store.dart';
+import '../data/series_repository.dart';
 
 class SearchPage extends StatefulWidget {
   @override
@@ -18,7 +21,28 @@ class _SearchPageState extends State<SearchPage> {
         padding: EdgeInsets.symmetric(vertical: 16),
         alignment: Alignment.center,
         // TODO: Implement with states_rebuilder
-        child: buildInitialInput(),
+        child: StateBuilder<SeriesStore>(
+          //reactive -> ReactiveModel<SeriesStore>
+          models: [Injector.getAsReactive<SeriesStore>()],
+          builder: (ctxt, reactiveModel) {
+            // if(reactiveModel.isWaiting){
+            //   return buildLoading()
+            // }else if(reactiveModel.hasData){
+            //   return buildColumnWithData(reactiveModel.state.series);
+            // }
+            // //isIdle or Error
+            // return buildInitialInput();
+
+            //Exhaustive Switch
+            return reactiveModel.whenConnectionState(
+              onIdle: () => buildInitialInput(),
+              onWaiting: () => buildLoading(),
+              onError: (_) => buildInitialInput(),
+              onData: (store) => buildColumnWithData(store.series),
+            );
+          },
+        ),
+        //child: buildInitialInput(),
       ),
     );
   }
@@ -66,7 +90,7 @@ class InputField extends StatelessWidget {
         onSubmitted: (value) => submitName(context, value),
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
-          hintText: "Enter a city",
+          hintText: "Enter a name",
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           suffixIcon: Icon(Icons.search),
         ),
@@ -74,7 +98,26 @@ class InputField extends StatelessWidget {
     );
   }
 
-  void submitName(BuildContext context, String cityName) {
+  //submit name to get ratings for the same
+  void submitName(BuildContext context, String name) {
     // TODO: Get ratings for the series
+    final reactiveModel = Injector.getAsReactive<SeriesStore>();
+    reactiveModel.setState(
+      (store) => store.getRatings(name),
+      //handle error from call side & without any setup on our side
+      onError: (context, error) {
+        if (error is NetworkError) {
+          Scaffold.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text("Couldn't fetch the Ratings. Is the device is online ?"),
+            ),
+          );
+        }else{
+          //Rethrow an unexpected error
+          throw error;
+        }
+      },
+    );
   }
 }
