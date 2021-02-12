@@ -33,7 +33,7 @@ class _SearchPageState extends State<SearchPage> {
             // //isIdle or Error
             // return buildInitialInput();
 
-            //Exhaustive Switch
+            //Exhaustive Switch (Observer)
             return reactiveModel.whenConnectionState(
               onIdle: () => buildInitialInput(),
               onWaiting: () => buildLoading(),
